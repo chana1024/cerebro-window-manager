@@ -15,13 +15,15 @@ const MEMOIZE_OPTIONS = {
  */
 function parseWmctrlResult(str) {
   let arr = str.split(/\s+/)
-  return [arr[0], arr[1], arr.slice(3).join(' ')]
+    let name = arr[2].split(".")[0]+"  ==>   [ "+arr.slice(4).join(' ')+" ]"
+  return [arr[0], arr[1], name]
 }
 
 function getFilteredWindowsRegex() {
   words = [
     'cerebro',
     'budgie-panel',
+    '@!0,0;BDHF'
   ]
   return new RegExp(`[^\/]*${words.map(item => `(${item})`).join('|')}[^\/]*$`, 'i');
 }
@@ -33,11 +35,11 @@ function getIcon(windowId) {
 
 const findWindow = memoize((searchWindowName) => {
   const regexp = new RegExp(`[^\/]*${searchWindowName}[^\/]*$`, 'i');
-  return shellCommand('wmctrl -l').then(result => (
+  return shellCommand('wmctrl -lx').then(result => (
     result
       .split('\n')
       .slice(0,-1)
-      .filter(line => (line.match(regexp) && !line.match(getFilteredWindowsRegex())))
+      .filter(line => (line.match(regexp) && (!line.match(getFilteredWindowsRegex())||line.match(new RegExp(`- Google Chrome$`)))))
       .map(str => {
         const [id, workspace, name] = parseWmctrlResult(str);
         const icon = getIcon(id);
@@ -71,13 +73,11 @@ const fn = ({term, display}) => {
   var input = term
   if (match) {
     input = match[1]
+      findWindow(input).then(list => {
+        const results = list;
+        display(results);
+      });
   } 
-  
-  findWindow(input).then(list => {
-    const results = list;
-    display(results);
-  });
-
 };
 
 module.exports = {
