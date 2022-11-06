@@ -1,6 +1,14 @@
 const { shellCommand, memoize } = require('cerebro-tools');
 const pluginIcon = require('./icon.png');
 const DEFAULT_ICON = require('./window.png');
+const getAppsList = require('./initializeAsync').getAppsList;
+console.log(getAppsList)
+let appsList = []
+getAppsList().then(apps => {
+  appsList = apps
+    console.log("win manager appsList")
+    console.log(appsList)
+})
 
 const MEMOIZE_OPTIONS = {
   promise: 'then',
@@ -15,8 +23,9 @@ const MEMOIZE_OPTIONS = {
  */
 function parseWmctrlResult(str) {
   let arr = str.split(/\s+/)
-    let name = arr[2].split(".")[0]+"  ==>   [ "+arr.slice(4).join(' ')+" ]"
-  return [arr[0], arr[1], name]
+    let appName = arr[2]
+    let winTitle = arr.slice(4)
+  return [arr[0], arr[1], winTitle.join(' '), appName];
 }
 
 function getFilteredWindowsRegex() {
@@ -28,9 +37,27 @@ function getFilteredWindowsRegex() {
   return new RegExp(`[^\/]*${words.map(item => `(${item})`).join('|')}[^\/]*$`, 'i');
 }
 
-function getIcon(windowId) {
-  // TODO: fetch the correct icon
-  return DEFAULT_ICON;
+function getIcon(winTitle,appName) {
+    console.log(winTitle)
+    console.log(appName)
+    appName=appName.split(".")[0]
+    if(appName == "google-chrome") {
+        appName = "google chrome"
+    }
+    if(appName == "x-terminal-emulator") {
+        appName = "terminator"
+    }
+    if(winTitle == "Remmina Remote Desktop Client") {
+        appName = "Remmina"
+    }
+    let winapp =[]
+    winapp = appsList.filter(app => app.name.toLowerCase() === appName.toLowerCase())
+    if(winapp.length > 0) {
+        return winapp[0].icon
+    }else{
+        winapp = appsList.filter(app => app.name.toLowerCase() === winTitle.toLowerCase())
+        return winapp.length > 0 ? winapp[0].icon : DEFAULT_ICON;
+    }
 }
 
 const findWindow = memoize((searchWindowName) => {
@@ -41,9 +68,9 @@ const findWindow = memoize((searchWindowName) => {
       .slice(0,-1)
       .filter(line => (line.match(regexp) && (!line.match(getFilteredWindowsRegex())||line.match(new RegExp(`- Google Chrome$`)))))
       .map(str => {
-        const [id, workspace, name] = parseWmctrlResult(str);
-        const icon = getIcon(id);
-        const title = name;
+        const [id, workspace,winTitle, appName] = parseWmctrlResult(str);
+        const icon = getIcon(winTitle,appName);
+        const title = appName+"  ==>  [ "+winTitle+" ]";
         return {
           id,
           title,
